@@ -9,10 +9,15 @@ def handle_client(client_socket):
         if not request:
             break
         
-        # Perform CPU-intensive task (e.g., factorial)
-        num = int(request)
-        result = math.factorial(num)  # Replace with other CPU-intensive work if needed
-        client_socket.send(f"Factorial of {num} is {result}".encode())
+        try:
+            # Perform CPU-intensive task (e.g., factorial)
+            num = int(request)
+            result = math.factorial(num)  # Replace with other CPU-intensive work if needed
+            response = f"Factorial of {num} is {result}"
+        except ValueError:
+            response = "Invalid input, please send a valid integer."
+        
+        client_socket.send(response.encode())
 
     client_socket.close()
 
@@ -30,4 +35,6 @@ def start_server(host="0.0.0.0", port=9999):
         client_handler.start()
 
 if __name__ == "__main__":
-    start_server()
+    # Use your actual server IP address
+    start_server(host="192.168.122.132")  # For server1
+    # start_server(host="192.168.122.26")  # Uncomment this line for server2

@@ -41,7 +41,7 @@ def monitor_and_autoscale():
     """Monitors CPU usage and performs autoscaling if needed."""
     while True:
         high_usage = False
-        for domain_name in ["server1", "server2"]:
+        for domain_name in ["Server1", "Server2"]:
             try:
                 domain = conn.lookupByName(domain_name)
                 cpu_usage = get_cpu_usage(domain)

@@ -10,6 +10,7 @@ PORT = 9999
 LOW_LOAD_REQUESTS = 5
 HIGH_LOAD_REQUESTS = 20
 
+
 def send_request(server_ip, number):
     """Sends a request to the server and receives the response."""
     try:
@@ -20,6 +21,7 @@ def send_request(server_ip, number):
             print(f"[CLIENT] Received from {server_ip}: {response}")
     except Exception as e:
         print(f"[CLIENT] Error connecting to {server_ip}: {e}")
+
 
 def generate_load(mode="low"):
     """Generates load by sending requests to the server."""
@@ -36,6 +38,7 @@ def generate_load(mode="low"):
 
     for thread in threads:
         thread.join()
+
 
 if __name__ == "__main__":
     while True:
