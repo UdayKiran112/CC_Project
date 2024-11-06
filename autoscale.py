@@ -3,7 +3,7 @@ import time
 import xml.etree.ElementTree as ET
 
 # Threshold CPU usage percentage for autoscaling
-CPU_THRESHOLD = 80.0
+CPU_THRESHOLD = 20.0
 # Time to wait before next check (in seconds)
 CHECK_INTERVAL = 5
 
@@ -28,7 +28,7 @@ def get_cpu_usage(domain):
 
 def create_new_server():
     """Clones an existing server XML to create a new server."""
-    base_domain = conn.lookupByName("server1")
+    base_domain = conn.lookupByName("Server1")
     xml_desc = base_domain.XMLDesc(0)
     new_xml = xml_desc.replace("<name>server1</name>", "<name>server3</name>")
 
