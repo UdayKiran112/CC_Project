@@ -7,58 +7,64 @@ def create_client(server_ip, server_port):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         client_socket.connect((server_ip, server_port))
+        print(f"[CLIENT] Connected to {server_ip}:{server_port}")
         return client_socket
     except ConnectionRefusedError:
         print(f"[CLIENT] Error connecting to {server_ip}:{server_port}")
         return None
 
-def send_requests(client_socket, number_to_calculate, request_count):
-    """Sends requests to the server and handles responses."""
-    for _ in range(request_count):
-        client_socket.send(str(number_to_calculate).encode())
+def send_matrix_requests(client_socket, matrix_size):
+    """Sends matrix size request to the server and handles response."""
+    try:
+        client_socket.send(str(matrix_size).encode())
         response = client_socket.recv(1024).decode()
         print(f"[CLIENT] Received: {response}")
+    except Exception as e:
+        print(f"[CLIENT] Error sending request: {e}")
+    finally:
+        client_socket.close()
 
-    client_socket.close()
-
-def run_client(server_ip, server_port, thread_count, number_to_calculate, request_count):
-    """Creates multiple threads to simulate multiple clients."""
-    threads = []
-    for _ in range(thread_count):
+def load_server(server_ip, server_port, initial_matrix_size, request_count, delay):
+    """Generates load by sending multiple requests to the server and increases matrix size over time."""
+    matrix_size = initial_matrix_size
+    for i in range(request_count):
         client_socket = create_client(server_ip, server_port)
         if client_socket:
-            thread = threading.Thread(target=send_requests, args=(client_socket, number_to_calculate, request_count))
-            thread.start()
-            threads.append(thread)
-
-    for thread in threads:
-        thread.join()
-
-def gradually_increase_load(server_ip, server_port, initial_threads, increment, max_threads, requests_per_thread, ramp_up_time):
-    """Gradually increases load on the server."""
-    current_threads = initial_threads
-    while current_threads <= max_threads:
-        print(f"[CLIENT] Starting load test with {current_threads} threads...")
-        run_client(server_ip, server_port, current_threads, 20, requests_per_thread)
+            send_matrix_requests(client_socket, matrix_size)
         
-        time.sleep(ramp_up_time)  # Wait before increasing the load
-        current_threads += increment
+        # Gradually increase the matrix size for more load
+        matrix_size += 50  # Increase matrix size by 50 each time
+        time.sleep(delay)  # Wait before sending the next request
+
+def determine_load_mode():
+    """Prompt for mode and return parameters for load generation."""
+    mode = input("Enter mode (high/low): ").strip().lower()
+    if mode == 'high':
+        print("High load mode selected.")
+        return 1000, 0.01, 300  # High load: 1000 requests, small delay, starting matrix size 300
+    else:
+        print("Low load mode selected.")
+        return 100, 0.1, 150  # Low load: 100 requests, longer delay, starting matrix size 150
 
 if __name__ == "__main__":
-    server1_ip = "192.168.122.132"  # IP of server1
-    server2_ip = "192.168.122.26"    # IP of server2
-    server_port = 9999                # Port for both servers
+    # Define server IPs and ports
+    server1_ip = "192.168.122.132"
+    server2_ip = "192.168.122.26"
+    server_port = 9999
 
-    initial_threads = 1                # Starting number of threads
-    increment = 1                      # Number of threads to add each ramp-up
-    max_threads = 50                   # Maximum number of threads
-    requests_per_thread = 10           # Number of requests each thread will send
-    ramp_up_time = 10                  # Time to wait between increases (in seconds)
+    # Get mode and corresponding load parameters
+    request_count, delay, initial_matrix_size = determine_load_mode()
 
-    print(f"[CLIENT] Starting gradual load test on {server1_ip}...")
-    gradually_increase_load(server1_ip, server_port, initial_threads, increment, max_threads, requests_per_thread, ramp_up_time)
+    # Create threads for each server
+    server1_thread = threading.Thread(target=load_server, args=(server1_ip, server_port, initial_matrix_size, request_count, delay))
+    server2_thread = threading.Thread(target=load_server, args=(server2_ip, server_port, initial_matrix_size, request_count, delay))
 
-    print(f"[CLIENT] Starting gradual load test on {server2_ip}...")
-    gradually_increase_load(server2_ip, server_port, initial_threads, increment, max_threads, requests_per_thread, ramp_up_time)
+    # Start both threads to load both servers simultaneously
+    server1_thread.start()
+    server2_thread.start()
 
-    print("[CLIENT] Load test completed.")
+    # Wait for both threads to complete
+    server1_thread.join()
+    server2_thread.join()
+
+    print("[CLIENT] Load testing completed on both servers.")
