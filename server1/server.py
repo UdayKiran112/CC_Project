@@ -1,45 +1,54 @@
 import socket
 import threading
-import time
+import numpy as np
 
 
-# Simulate a CPU-intensive task (to trigger high CPU utilization)
-def cpu_intensive_task():
-    start_time = time.time()
-    while time.time() - start_time < 5:  # Simulate a 5-second computation
-        x = 0
-        for _ in range(1000000):
-            x += 1
-    return x
-
-
-# Handle each client request
 def handle_client(client_socket):
-    request = client_socket.recv(1024).decode("utf-8")
-    if request == "COMPUTE":
-        # Simulate CPU intensive task
-        cpu_intensive_task()
-        client_socket.send("Computation Done".encode("utf-8"))
+    """Handles client requests with matrix multiplication."""
+    while True:
+        request = client_socket.recv(1024).decode()
+        if not request:
+            break
+
+        try:
+            # Receive matrix size from the client
+            matrix_size = int(request)
+            if matrix_size <= 0:
+                response = "Matrix size must be a positive integer."
+            else:
+                # Generate two random matrices of the specified size
+                matrix_a = np.random.rand(matrix_size, matrix_size)
+                matrix_b = np.random.rand(matrix_size, matrix_size)
+
+                # Perform matrix multiplication (CPU-intensive)
+                result = np.dot(matrix_a, matrix_b)
+
+                # Send back a success message
+                response = f"Matrix multiplication of size {matrix_size}x{matrix_size} completed."
+        except ValueError:
+            response = "Invalid input, please send a valid integer."
+
+        # Send response back to the client
+        client_socket.send(response.encode())
+
     client_socket.close()
 
 
-# Server function to listen for incoming connections
-def server_thread(ip, port):
+def start_server(host="0.0.0.0", port=9999):
+    """Starts the server and listens for incoming connections."""
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((ip, port))
+    server.bind((host, port))
     server.listen(5)
-
-    print(f"Server listening on {ip}:{port}...")
+    print(f"[SERVER] Listening on {host}:{port}")
 
     while True:
         client_socket, addr = server.accept()
-        print(f"Accepted connection from {addr}")
+        print(f"[SERVER] Accepted connection from {addr}")
         client_handler = threading.Thread(target=handle_client, args=(client_socket,))
         client_handler.start()
 
 
-# Start the server
 if __name__ == "__main__":
-    ip = "0.0.0.0"  # Accept connections on any IP
-    port = 9999  # Example port
-    server_thread(ip, port)
+    start_server(
+        host="192.168.122.201"
+    )  # Replace with the actual IP for server1 or server2

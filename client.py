@@ -1,60 +1,81 @@
 import socket
 import threading
-import random
 import time
 
-# List of server addresses
-server_addresses = [
-    ("192.168.122.201", 9999),  # Example IPs of VM servers
-]
-
-# Number of requests to send based on load mode
-low_load_requests = 5
-high_load_requests = 50
-
-
-def send_request(server_ip, server_port):
-    """Send a request to the server and wait for a response."""
+def create_client(server_ip, server_port):
+    """Creates a TCP client that connects to the specified server."""
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((server_ip, server_port))
-        client.send("COMPUTE".encode("utf-8"))
-        response = client.recv(1024)
-        print(f"Received: {response.decode('utf-8')}")
-        client.close()
+        client_socket.connect((server_ip, server_port))
+        print(f"[CLIENT] Connected to {server_ip}:{server_port}")
+        return client_socket
+    except ConnectionRefusedError:
+        print(f"[CLIENT] Error connecting to {server_ip}:{server_port}")
+        return None
+
+def send_matrix_requests(client_socket, matrix_size):
+    """Sends matrix size request to the server and handles response."""
+    try:
+        client_socket.send(str(matrix_size).encode())
+        response = client_socket.recv(1024).decode()
+        print(f"[CLIENT] Received: {response}")
     except Exception as e:
-        print(f"Error sending request to {server_ip}:{server_port} - {e}")
+        print(f"[CLIENT] Error sending request: {e}")
+    finally:
+        client_socket.close()
 
+def load_server(server_ip, server_port, initial_matrix_size, request_count, delay):
+    """Generates load by sending multiple requests to the server and gradually increases matrix size over time."""
+    matrix_size = initial_matrix_size
+    for i in range(request_count):
+        client_socket = create_client(server_ip, server_port)
+        if client_socket:
+            send_matrix_requests(client_socket, matrix_size)
 
-def client_load_mode(mode="low"):
-    """Simulate client load by sending requests to servers."""
-    requests_to_send = low_load_requests if mode == "low" else high_load_requests
-    threads = []
-    for _ in range(requests_to_send):
-        # Randomly select a server to send a request to
-        server_ip, server_port = random.choice(server_addresses)
-        thread = threading.Thread(target=send_request, args=(server_ip, server_port))
-        threads.append(thread)
-        thread.start()
+        # Gradually increase the matrix size for more load
+        matrix_size += 50  # Increase matrix size by 50 each time
+        # Gradually decrease the load count in each iteration for gradual increase
+        request_count -= 10  # Reduce the request count as load increases
+        if request_count <= 0:  # Ensure it doesn't go negative
+            break
+        time.sleep(delay)  # Wait before sending the next request
 
-    for thread in threads:
-        thread.join()
+def determine_load_mode():
+    """Prompt for mode and return parameters for load generation."""
+    mode = input("Enter mode (high/low): ").strip().lower()
+    if mode == "high":
+        print("High load mode selected.")
+        return (
+            300,  # Starting with 300 requests
+            0.01,  # High load: small delay
+            300,   # Starting matrix size 300
+        )
+    else:
+        print("Low load mode selected.")
+        return (
+            50,  # Starting with 50 requests
+            0.1,  # Low load: longer delay
+            150,  # Starting matrix size 150
+        )
 
-
-# Function to periodically switch between low and high load
-def simulate_load():
-    while True:
-        # Start with low load
-        print("[CLIENT] Starting low load mode...")
-        client_load_mode(mode="low")
-        time.sleep(10)  # Simulate low load for 10 seconds
-
-        # Switch to high load
-        print("[CLIENT] Switching to high load mode...")
-        client_load_mode(mode="high")
-        time.sleep(10)  # Simulate high load for 10 seconds
-
-
-# Start the client simulation
 if __name__ == "__main__":
-    simulate_load()
+    # Define server IP and port
+    server1_ip = "192.168.122.201"
+    server_port = 9999
+
+    # Get mode and corresponding load parameters
+    request_count, delay, initial_matrix_size = determine_load_mode()
+
+    # Create thread for server1
+    server1_thread = threading.Thread(
+        target=load_server,
+        args=(server1_ip, server_port, initial_matrix_size, request_count, delay),
+    )
+
+    # Start the thread for server1
+    server1_thread.start()
+
+    # Wait for the thread to complete
+    server1_thread.join()
+
+    print("[CLIENT] Load testing completed on server1.")

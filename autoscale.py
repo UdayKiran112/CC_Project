@@ -87,7 +87,7 @@ def create_new_server(conn):
 
 
 def monitor_and_autoscale():
-    """Monitor CPU usage and scale up if necessary."""
+    """Monitor CPU usage for all servers and scale up if necessary."""
     conn = libvirt.open("qemu:///system")
     if conn is None:
         print("[MONITOR] Failed to connect to hypervisor.")
@@ -96,17 +96,23 @@ def monitor_and_autoscale():
     try:
         while True:
             high_usage = False
-            for domain_name in ["Server1", "Server2"]:
+            all_domains = conn.listAllDomains(0)
+
+            if not all_domains:
+                print("[MONITOR] No domains available for monitoring.")
+                return
+
+            for domain in all_domains:
                 try:
-                    domain = conn.lookupByName(domain_name)
+                    domain_name = domain.name()
                     cpu_usage = get_cpu_utilization(domain, interval=CHECK_INTERVAL)
                     print(f"[MONITOR] {domain_name} CPU usage: {cpu_usage:.2f}%")
 
                     if cpu_usage is not None and cpu_usage > CPU_THRESHOLD:
                         high_usage = True
 
-                except libvirt.libvirtError:
-                    print(f"[MONITOR] Unable to access {domain_name}")
+                except libvirt.libvirtError as e:
+                    print(f"[MONITOR] Unable to monitor {domain.name()}: {e}")
 
             if high_usage:
                 print("[AUTOSCALER] High CPU usage detected, creating a new server...")
