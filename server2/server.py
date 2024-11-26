@@ -46,4 +46,4 @@ def start_server(host="0.0.0.0", port=9999):
         client_handler.start()
 
 if __name__ == "__main__":
-    start_server(host="192.168.122.26")  # Replace with the actual IP for server1 or server2
+    start_server(host="192.168.122.85")  # Replace with the actual IP for server1 or server2
