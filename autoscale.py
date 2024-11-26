@@ -7,19 +7,45 @@ import shutil
 # Threshold CPU usage percentage for autoscaling
 CPU_THRESHOLD = 80.0
 # Time to wait before next check (in seconds)
-CHECK_INTERVAL = 5
+CHECK_INTERVAL = 1
 # Directory where disk images are stored
 DISK_IMAGE_DIR = "/var/lib/libvirt/images/"
 
 
-def get_cpu_usage(domain):
-    """Calculate CPU usage percentage for a domain."""
-    prev_stats = domain.getCPUStats(True)[0]
-    prev_total = prev_stats["cpu_time"]
-    time.sleep(1)
-    curr_stats = domain.getCPUStats(True)[0]
-    curr_total = curr_stats["cpu_time"]
-    return ((curr_total - prev_total) / (1e9 * CHECK_INTERVAL)) * 100
+def get_cpu_utilization(domain, interval=1):
+    """Calculate the CPU utilization percentage for a libvirt domain."""
+    try:
+        # Get initial stats and time
+        prev_stats = domain.getCPUStats(True)
+        prev_time = time.time()
+
+        # Wait for the interval
+        time.sleep(interval)
+
+        # Get updated stats and time
+        current_stats = domain.getCPUStats(True)
+        current_time = time.time()
+
+        # Calculate CPU time difference across all vCPUs
+        cpu_time_diff = sum(
+            curr["cpu_time"] - prev["cpu_time"]
+            for curr, prev in zip(current_stats, prev_stats)
+        )
+
+        elapsed_time = current_time - prev_time
+        num_cpu = domain.maxVcpus()
+
+        # Return 0 if elapsed time is invalid
+        if elapsed_time <= 0:
+            return 0.0
+
+        # Normalize CPU time and calculate utilization
+        utilization = (cpu_time_diff / (elapsed_time * num_cpu * 1e9)) * 100
+        return utilization
+
+    except libvirt.libvirtError as e:
+        print(f"Error getting CPU utilization for domain {domain.name()}: {e}")
+        return None
 
 
 def generate_unique_server_name(existing_domains):
@@ -84,10 +110,10 @@ def monitor_and_autoscale():
             for domain_name in ["Server1", "Server2"]:
                 try:
                     domain = conn.lookupByName(domain_name)
-                    cpu_usage = get_cpu_usage(domain)
-                    print(f"[MONITOR] {domain_name} CPU usage: {cpu_usage}%")
+                    cpu_usage = get_cpu_utilization(domain, interval=CHECK_INTERVAL)
+                    print(f"[MONITOR] {domain_name} CPU usage: {cpu_usage:.2f}%")
 
-                    if cpu_usage > CPU_THRESHOLD:
+                    if cpu_usage is not None and cpu_usage > CPU_THRESHOLD:
                         high_usage = True
 
                 except libvirt.libvirtError:

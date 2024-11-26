@@ -61,8 +61,8 @@ def determine_load_mode():
 
 if __name__ == "__main__":
     # Define server IPs and ports
-    server1_ip = "192.168.122.186"
-    server2_ip = "192.168.122.85"
+    server1_ip = "192.168.122.201"
+    server2_ip = "192.168.122.78"
     server_port = 9999
 
     # Get mode and corresponding load parameters

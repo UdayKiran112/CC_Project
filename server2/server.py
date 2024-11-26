@@ -2,6 +2,7 @@ import socket
 import threading
 import numpy as np
 
+
 def handle_client(client_socket):
     """Handles client requests with matrix multiplication."""
     while True:
@@ -32,6 +33,7 @@ def handle_client(client_socket):
 
     client_socket.close()
 
+
 def start_server(host="0.0.0.0", port=9999):
     """Starts the server and listens for incoming connections."""
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -45,5 +47,8 @@ def start_server(host="0.0.0.0", port=9999):
         client_handler = threading.Thread(target=handle_client, args=(client_socket,))
         client_handler.start()
 
+
 if __name__ == "__main__":
-    start_server(host="192.168.122.85")  # Replace with the actual IP for server1 or server2
+    start_server(
+        host="192.168.122.78"
+    )  # Replace with the actual IP for server1 or server2
