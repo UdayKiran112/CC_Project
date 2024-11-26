@@ -89,7 +89,7 @@ class CPUMonitor:
         plt.tight_layout()
 
         # Add threshold line
-        plt.axhline(y=20.0, color='r', linestyle='--', label='Scale Threshold')
+        plt.axhline(y=80.0, color='r', linestyle='--', label='Scale Threshold')
 
         # Save the plot
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -101,8 +101,8 @@ def main():
     monitor.start_monitoring()
 
     try:
-        # Run for a desired duration (e.g., 5 minutes)
-        duration = 300  # seconds
+        # Run for a desired duration (e.g., 2 minutes)
+        duration = 120  # seconds
         print(f"Monitoring CPU usage for {duration} seconds...")
         time.sleep(duration)
     finally:

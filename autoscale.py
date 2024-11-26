@@ -6,27 +6,21 @@ import shutil
 
 # Threshold CPU usage percentage for autoscaling
 CPU_THRESHOLD = 80.0
-# Time to wait before next check (in seconds)
 CHECK_INTERVAL = 1
-# Directory where disk images are stored
-DISK_IMAGE_DIR = "/var/lib/libvirt/images/"
+DISK_IMAGE_DIR = "/var/lib/libvirt/images/"  # Update based on your environment
 
 
 def get_cpu_utilization(domain, interval=1):
     """Calculate the CPU utilization percentage for a libvirt domain."""
     try:
-        # Get initial stats and time
         prev_stats = domain.getCPUStats(True)
         prev_time = time.time()
 
-        # Wait for the interval
         time.sleep(interval)
 
-        # Get updated stats and time
         current_stats = domain.getCPUStats(True)
         current_time = time.time()
 
-        # Calculate CPU time difference across all vCPUs
         cpu_time_diff = sum(
             curr["cpu_time"] - prev["cpu_time"]
             for curr, prev in zip(current_stats, prev_stats)
@@ -35,11 +29,9 @@ def get_cpu_utilization(domain, interval=1):
         elapsed_time = current_time - prev_time
         num_cpu = domain.maxVcpus()
 
-        # Return 0 if elapsed time is invalid
         if elapsed_time <= 0:
             return 0.0
 
-        # Normalize CPU time and calculate utilization
         utilization = (cpu_time_diff / (elapsed_time * num_cpu * 1e9)) * 100
         return utilization
 
@@ -66,7 +58,6 @@ def create_new_server(conn):
         existing_domains = [dom.name() for dom in conn.listAllDomains(0)]
         new_server_name = generate_unique_server_name(existing_domains)
 
-        # Update the configuration XML with a new name and UUID
         new_uuid = str(uuid.uuid4())
         new_xml = xml_desc.replace(
             "<name>Server1</name>", f"<name>{new_server_name}</name>"
@@ -75,7 +66,6 @@ def create_new_server(conn):
             f"<uuid>{base_domain.UUIDString()}</uuid>", f"<uuid>{new_uuid}</uuid>"
         )
 
-        # Prepare a new disk image
         new_disk_image = os.path.join(DISK_IMAGE_DIR, f"{new_server_name}.qcow2")
         base_disk_image = os.path.join(DISK_IMAGE_DIR, "Server1.qcow2")
 
@@ -83,10 +73,9 @@ def create_new_server(conn):
             print(f"[AUTOSCALER] Base disk image '{base_disk_image}' not found.")
             return
 
-        shutil.copy(base_disk_image, new_disk_image)  # Copy the disk image
+        shutil.copy(base_disk_image, new_disk_image)
         new_xml = new_xml.replace(base_disk_image, new_disk_image)
 
-        # Define and start the new VM
         new_domain = conn.defineXML(new_xml)
         print(f"[AUTOSCALER] Domain '{new_server_name}' defined.")
 
